@@ -1,17 +1,20 @@
-graph TD
-    A["PresentationLayer
-+ServiceAPI"]
+classDiagram
+    class PresentationLayer {
+        <<Interface>>
+        +ServiceAPI
+    }
 
-    A -->|Facade Pattern| B
+    class BusinessLogicLayer {
+        +User
+        +Place
+        +Review
+        +Amenity
+    }
 
-    B["BusinessLogicLayer
-+User
-+Place
-+Review
-+Amenity"]
+    class PersistenceLayer {
+        +DatabaseAccess
+        +Repository
+    }
 
-    B -->|Database Operations| C
-
-    C["PersistenceLayer
-+DatabaseAccess
-+Repository"]
+    PresentationLayer --> BusinessLogicLayer : Facade Pattern
+    BusinessLogicLayer --> PersistenceLayer : Database Operations
