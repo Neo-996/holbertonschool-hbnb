@@ -1,0 +1,32 @@
+classDiagram
+    %% Presentation Layer
+    class PresentationLayer {
+        <<Interface>>
+        +UserAPI
+        +PlaceAPI
+        +ReviewAPI
+        +AmenityAPI
+    }
+
+    %% Business Logic Layer
+    class BusinessLogicLayer {
+        +ApplicationFacade
+        +UserService
+        +PlaceService
+        +ReviewService
+        +AmenityService
+        +Models
+    }
+
+    %% Persistence Layer
+    class PersistenceLayer {
+        +UserRepository
+        +PlaceRepository
+        +ReviewRepository
+        +AmenityRepository
+        +DatabaseConnection
+    }
+
+    %% Communication between layers
+    PresentationLayer --> BusinessLogicLayer : Facade Pattern
+    BusinessLogicLayer --> PersistenceLayer : Repository Access
