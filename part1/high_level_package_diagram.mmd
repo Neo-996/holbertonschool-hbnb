@@ -1,20 +1,17 @@
 graph TD
-    subgraph PresentationLayer["PresentationLayer"]
-        A1["+ServiceAPI"]
-    end
+    A["PresentationLayer
++ServiceAPI"]
 
-    PresentationLayer -->|Facade Pattern| BusinessLogicLayer
+    A -->|Facade Pattern| B
 
-    subgraph BusinessLogicLayer["BusinessLogicLayer"]
-        B1["+User"]
-        B2["+Place"]
-        B3["+Review"]
-        B4["+Amenity"]
-    end
+    B["BusinessLogicLayer
++User
++Place
++Review
++Amenity"]
 
-    BusinessLogicLayer -->|Database Operations| PersistenceLayer
+    B -->|Database Operations| C
 
-    subgraph PersistenceLayer["PersistenceLayer"]
-        C1["+DatabaseAccess"]
-        C2["+Repository"]
-    end
+    C["PersistenceLayer
++DatabaseAccess
++Repository"]
