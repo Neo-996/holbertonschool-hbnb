@@ -1,15 +1,15 @@
 # HBnB Evolution – Technical Documentation
 
 ## 📘 Introduction
-This document provides a comprehensive technical overview of the HBnB Evolution application.  
-It compiles all major architecture diagrams and explanations developed throughout the project.  
-The goal is to guide the implementation process by providing a clear reference for the application’s design and logic.
+
+This document serves as the complete technical blueprint for the **HBnB Evolution** application. It consolidates the high-level architectural design, core data models, and API interaction flows using standardized UML diagrams. The goal is to provide clear and actionable documentation that guides implementation and future scaling.
 
 ---
 
-## 🗂️ High-Level Architecture
+## 📂 High-Level Architecture
 
 ### High-Level Package Diagram
+
 ```mermaid
 classDiagram
     class PresentationLayer {
@@ -34,14 +34,16 @@ classDiagram
 ```
 
 **Explanation:**
-- The system is divided into three layers: Presentation, Business Logic, and Persistence.
-- Each layer has a specific role and communicates with the others using defined patterns.
-- The `Facade Pattern` simplifies the interface between the Presentation and Business Logic layers.
-- The Business Logic Layer communicates with the Persistence Layer using repositories and database operations.
+
+* **Presentation Layer** handles user requests via a unified API interface.
+* **Business Logic Layer** contains all domain models and core services.
+* **Persistence Layer** communicates with the database to perform all CRUD operations.
+* The layers follow a **Facade Pattern** for simplicity and separation of concerns.
 
 ---
 
-## 🧩 Business Logic Layer - Class Diagram
+## 🧩 Business Logic Layer – Class Diagram
+
 ```mermaid
 classDiagram
     class BaseModel {
@@ -101,15 +103,17 @@ classDiagram
 ```
 
 **Explanation:**
-- All entities inherit from `BaseModel`, which provides ID and timestamps.
-- `User` owns `Place` and writes `Review`.
-- `Place` has many `Review`s and `Amenity` objects.
+
+* `BaseModel` provides shared fields like `id`, `created_at`, and `updated_at`.
+* `User`, `Place`, `Review`, and `Amenity` extend `BaseModel`.
+* Cardinal relationships enforce data constraints and clarify ownership.
 
 ---
 
-## 🔁 Sequence Diagrams for API Calls
+## 🔄 Sequence Diagrams for API Calls
 
 ### 1. User Registration
+
 ```mermaid
 sequenceDiagram
     participant User
@@ -126,6 +130,7 @@ sequenceDiagram
 ```
 
 ### 2. Place Creation
+
 ```mermaid
 sequenceDiagram
     participant User
@@ -142,6 +147,7 @@ sequenceDiagram
 ```
 
 ### 3. Review Submission
+
 ```mermaid
 sequenceDiagram
     participant User
@@ -158,6 +164,7 @@ sequenceDiagram
 ```
 
 ### 4. Fetching a List of Places
+
 ```mermaid
 sequenceDiagram
     participant User
@@ -176,7 +183,12 @@ sequenceDiagram
 ---
 
 ## ✅ Conclusion
-This document compiles all architectural, design, and interaction diagrams for the HBnB Evolution project.  
-It serves as a solid reference for implementation, testing, and future maintenance.  
-Using a layered structure, clear object-oriented models, and sequence diagrams, this blueprint ensures a maintainable and scalable application.
 
+This technical documentation consolidates the architectural structure, object models, and user interactions for the HBnB Evolution platform. It adheres to UML standards and is designed to be a reference for developers, testers, and stakeholders across all development stages. The use of layered architecture and sequence flows ensures clarity, scalability, and maintainability of the system.
+
+---
+
+**Author:** 
+- Abdulelah Alsheri
+- Muhannad Gsgs
+- Abdulaziz Alzahrani
