@@ -1,6 +1,5 @@
 #!/usr/bin/python3
 
-from flask import request
 from flask_restx import Namespace, Resource, fields
 from app.services.facade import facade
 from werkzeug.exceptions import NotFound
@@ -22,37 +21,39 @@ place_model = api.model("Place", {
 
 @api.route("/")
 class PlaceListResource(Resource):
+    @api.response(200, "List of places retrieved successfully")
     @api.marshal_list_with(place_model)
     def get(self):
-        """List all places"""
-        return facade.place_repo.get_all()
+        return facade.get_all_places()
 
-    @api.expect(place_model)
+    @api.expect(place_model, validate=True)
+    @api.response(201, "Place created successfully")
     @api.marshal_with(place_model, code=201)
     def post(self):
-        """Create a new place"""
-        data = request.json
-        place = facade.create_place(data)
-        return place, 201
+        place_data = api.payload
+        new_place = facade.create_place(place_data)
+        return new_place, 201
 
 
 @api.route("/<string:place_id>")
 @api.param("place_id", "The Place ID")
 class PlaceResource(Resource):
+    @api.response(200, "Place retrieved successfully")
+    @api.response(404, "Place not found")
     @api.marshal_with(place_model)
     def get(self, place_id):
-        """Retrieve a place by ID"""
-        place = facade.place_repo.get(place_id)
+        place = facade.get_place(place_id)
         if not place:
             raise NotFound("Place not found")
         return place
 
-    @api.expect(place_model)
+    @api.expect(place_model, validate=True)
+    @api.response(200, "Place updated successfully")
+    @api.response(404, "Place not found")
     @api.marshal_with(place_model)
     def put(self, place_id):
-        """Update a place by ID"""
-        data = request.json
-        updated = facade.update_place(place_id, data)
-        if not updated:
+        place_data = api.payload
+        updated_place = facade.update_place(place_id, place_data)
+        if not updated_place:
             raise NotFound("Place not found")
-        return updated
+        return updated_place

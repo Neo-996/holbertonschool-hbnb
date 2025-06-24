@@ -1,5 +1,8 @@
+#!/usr/bin/python3
+
 from flask_restx import Namespace, Resource, fields
-from app.services import facade
+from app.services.facade import facade
+from werkzeug.exceptions import NotFound
 
 api = Namespace('users', description='User operations')
 
@@ -9,13 +12,13 @@ user_model = api.model('User', {
     'email': fields.String(required=True, description='Email address')
 })
 
+
 @api.route('/')
 class UserList(Resource):
     @api.expect(user_model, validate=True)
     @api.response(201, 'User successfully created')
     @api.response(400, 'Email already registered or invalid')
     def post(self):
-        """Register a new user"""
         user_data = api.payload
         existing_user = facade.get_user_by_email(user_data['email'])
         if existing_user:
@@ -30,7 +33,6 @@ class UserList(Resource):
 
     @api.response(200, 'List of users retrieved successfully')
     def get(self):
-        """Retrieve a list of all users"""
         users = facade.list_users()
         return [{
             'id': user.id,
@@ -39,15 +41,16 @@ class UserList(Resource):
             'email': user.email
         } for user in users], 200
 
-@api.route('/<user_id>')
+
+@api.route('/<string:user_id>')
+@api.param('user_id', 'The User ID')
 class UserResource(Resource):
     @api.response(200, 'User retrieved successfully')
     @api.response(404, 'User not found')
     def get(self, user_id):
-        """Retrieve a user by ID"""
         user = facade.get_user(user_id)
         if not user:
-            return {'error': 'User not found'}, 404
+            raise NotFound('User not found')
         return {
             'id': user.id,
             'first_name': user.first_name,
@@ -59,11 +62,10 @@ class UserResource(Resource):
     @api.response(200, 'User updated successfully')
     @api.response(404, 'User not found')
     def put(self, user_id):
-        """Update user information"""
         user_data = api.payload
         user = facade.update_user(user_id, user_data)
         if not user:
-            return {'error': 'User not found'}, 404
+            raise NotFound('User not found')
         return {
             'id': user.id,
             'first_name': user.first_name,

@@ -1,5 +1,9 @@
+#!/usr/bin/python3
+
 from .base_model import BaseModel
 from .user import User
+from datetime import datetime
+
 
 class Place(BaseModel):
     def __init__(self, title, description, price, latitude, longitude, owner):
@@ -31,3 +35,24 @@ class Place(BaseModel):
     def add_amenity(self, amenity):
         if amenity not in self.amenities:
             self.amenities.append(amenity)
+
+    def update(self, updates):
+        for key, value in updates.items():
+            if hasattr(self, key):
+                setattr(self, key, value)
+        self.updated_at = datetime.utcnow()
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "title": self.title,
+            "description": self.description,
+            "price": self.price,
+            "latitude": self.latitude,
+            "longitude": self.longitude,
+            "owner": self.owner.id if hasattr(self.owner, "id") else str(self.owner),
+            "amenities": [a.id if hasattr(a, "id") else str(a) for a in self.amenities],
+            "reviews": [r.id if hasattr(r, "id") else str(r) for r in self.reviews],
+            "created_at": self.created_at.isoformat(),
+            "updated_at": self.updated_at.isoformat()
+        }

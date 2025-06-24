@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+import uuid
 from app.models.user import User
 from app.models.place import Place
 from app.models.review import Review
@@ -23,7 +25,10 @@ class HBnBFacade:
     def get_user(self, user_id):
         return self.user_repo.get(user_id)
 
-    def get_all_users(self):
+    def get_user_by_email(self, email):
+        return self.user_repo.get_by_attribute("email", email)
+
+    def list_users(self):
         return self.user_repo.get_all()
 
     def update_user(self, user_id, user_data):
@@ -40,7 +45,17 @@ class HBnBFacade:
     # Place Methods
     # ---------------------
     def create_place(self, place_data):
-        place = Place(**place_data)
+        place = Place(
+            id=str(uuid.uuid4()),
+            title=place_data.get('title'),
+            description=place_data.get('description'),
+            price_per_night=place_data.get('price_per_night'),
+            latitude=place_data.get('latitude'),
+            longitude=place_data.get('longitude'),
+            max_guests=place_data.get('max_guests'),
+            owner_id=place_data.get('owner_id'),
+            amenities=place_data.get('amenity_ids', [])
+        )
         self.place_repo.add(place)
         return place
 
@@ -50,15 +65,14 @@ class HBnBFacade:
     def get_all_places(self):
         return self.place_repo.get_all()
 
-    def update_place(self, place_id, place_data):
+    def update_place(self, place_id, updates):
         place = self.place_repo.get(place_id)
         if not place:
             return None
-        place.update(place_data)
+        for key, value in updates.items():
+            if hasattr(place, key):
+                setattr(place, key, value)
         return place
-
-    def delete_place(self, place_id):
-        return self.place_repo.delete(place_id)
 
     # ---------------------
     # Review Methods
@@ -107,3 +121,7 @@ class HBnBFacade:
 
     def delete_amenity(self, amenity_id):
         return self.amenity_repo.delete(amenity_id)
+
+
+# Singleton instance to be shared across the app
+facade = HBnBFacade()
