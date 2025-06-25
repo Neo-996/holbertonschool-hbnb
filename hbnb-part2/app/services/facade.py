@@ -29,6 +29,9 @@ class HBnBFacade:
     def get_all_users(self) -> List[User]:
         return self.user_repo.get_all()
 
+    def list_users(self):
+        return self.user_repo.get_all()
+
     def update_user(self, user_id: str, user_data: Dict[str, Any]) -> Optional[User]:
         user = self.user_repo.get(user_id)
         if not user:
