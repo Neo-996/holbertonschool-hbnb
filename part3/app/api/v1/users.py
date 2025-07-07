@@ -5,6 +5,7 @@ from werkzeug.exceptions import NotFound, BadRequest
 
 api = Namespace('users', description='User operations')
 
+# Updated model with password field
 user_model = api.model('User', {
     'email': fields.String(
         required=True,
@@ -22,8 +23,14 @@ user_model = api.model('User', {
         min_length=1,
         max_length=50,
         description='Last name (1-50 chars)'
+    ),
+    'password': fields.String(
+        required=True,
+        min_length=8,
+        description='Password (at least 8 characters)'
     )
 })
+
 
 @api.route('/')
 class UserList(Resource):
@@ -34,11 +41,16 @@ class UserList(Resource):
         """Create a new user"""
         try:
             user_data = api.payload
-            existing_user = facade.get_user_by_email(user_data['email'])
-            if existing_user:
+            if facade.get_user_by_email(user_data['email']):
                 return {'error': 'Email already registered'}, 400
-                
+
+            # Create user instance and hash password
             new_user = facade.create_user(user_data)
+            new_user.set_password(user_data['password'])
+
+            # Save user (facade layer should persist this)
+            new_user.save()
+
             return {
                 'id': new_user.id,
                 'first_name': new_user.first_name,
@@ -58,6 +70,7 @@ class UserList(Resource):
             'last_name': user.last_name,
             'email': user.email
         } for user in users], 200
+
 
 @api.route('/<string:user_id>')
 @api.param('user_id', 'The User ID')
@@ -87,6 +100,7 @@ class UserResource(Resource):
             user = facade.update_user(user_id, user_data)
             if not user:
                 raise NotFound('User not found')
+
             return {
                 'id': user.id,
                 'first_name': user.first_name,

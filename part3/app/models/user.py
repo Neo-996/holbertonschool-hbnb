@@ -1,8 +1,10 @@
 #!/usr/bin/python3
-"""User model implementation with enhanced validation and documentation"""
+"""User model implementation with secure password hashing and validation"""
+
 import re
 from typing import Dict, Any, Set
 from .base_model import BaseModel
+from app import bcrypt  # Import bcrypt from the app factory
 
 class User(BaseModel):
     """
@@ -11,7 +13,7 @@ class User(BaseModel):
     Class Attributes:
         _emails (Set[str]): Tracks all registered emails for uniqueness
     """
-    
+
     _emails: Set[str] = set()  # Class-level email registry
 
     def __init__(
@@ -23,24 +25,24 @@ class User(BaseModel):
     ):
         """
         Initialize a User instance with validated attributes.
-        
+
         Args:
             first_name: User's first name (1-50 chars)
             last_name: User's last name (1-50 chars)
             email: Valid and unique email address
             is_admin: Admin privileges flag
-            
+
         Raises:
             ValueError: For invalid attribute values
         """
         super().__init__()
-        
+
         # Use property setters for validation
         self.first_name = first_name
         self.last_name = last_name
         self.email = email
         self.is_admin = is_admin
-        self._password = None  # Will be used for authentication
+        self._password = None  # Will be set using set_password()
 
         User._emails.add(email)
 
@@ -78,19 +80,48 @@ class User(BaseModel):
         """Set email with format validation and uniqueness check"""
         if not isinstance(value, str):
             raise ValueError("Email must be a string")
-            
+
         if not re.match(r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$", value):
             raise ValueError("Invalid email format")
-            
+
         if value in User._emails and getattr(self, '_email', None) != value:
             raise ValueError("Email already registered")
-            
+
         self._email = value
+
+    def set_password(self, password: str) -> None:
+        """
+        Securely hash and set the user's password using bcrypt.
+
+        Args:
+            password: Plain text password
+
+        Raises:
+            ValueError: If password does not meet security requirements
+        """
+        if not isinstance(password, str) or len(password) < 8:
+            raise ValueError("Password must be at least 8 characters long")
+
+        self._password = bcrypt.generate_password_hash(password).decode('utf-8')
+
+    def verify_password(self, password: str) -> bool:
+        """
+        Verify the provided password against the hashed password.
+
+        Args:
+            password: Plain text password to check
+
+        Returns:
+            True if match, False otherwise
+        """
+        if not self._password:
+            return False
+        return bcrypt.check_password_hash(self._password, password)
 
     def to_dict(self) -> Dict[str, Any]:
         """
         Convert user to dictionary representation, excluding sensitive data.
-        
+
         Returns:
             Dictionary containing safe user attributes
         """
@@ -107,10 +138,10 @@ class User(BaseModel):
     def update(self, data: Dict[str, Any]) -> None:
         """
         Update user attributes from dictionary.
-        
+
         Args:
             data: Dictionary of attributes to update
-            
+
         Raises:
             ValueError: For invalid attributes or values
         """
@@ -121,17 +152,6 @@ class User(BaseModel):
                 raise ValueError("Email cannot be changed")
             setattr(self, key, value)
         self.save()
-
-    def set_password(self, password: str) -> None:
-        """Securely set user password"""
-        if len(password) < 8:
-            raise ValueError("Password must be at least 8 characters")
-        
-        self._password = password
-
-    def verify_password(self, password: str) -> bool:
-        """Verify user password"""
-        return self._password == password
 
     def __str__(self) -> str:
         """String representation of the user"""
