@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 from flask_restx import Namespace, Resource, fields
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.services.facade import facade
 from werkzeug.exceptions import NotFound, BadRequest
 
@@ -63,10 +64,14 @@ class PlaceListResource(Resource):
     @api.response(201, "Created")
     @api.response(400, "Validation Error")
     @api.marshal_with(place_model, code=201)
+    @jwt_required()
     def post(self):
         """Create a new place"""
+        current_user = get_jwt_identity()
         try:
             place_data = api.payload
+            # Override owner_id with authenticated user ID
+            place_data["owner_id"] = current_user["id"]
             new_place = facade.create_place(place_data)
             return new_place, 201
         except ValueError as e:
@@ -88,15 +93,24 @@ class PlaceResource(Resource):
     @api.expect(place_model, validate=True)
     @api.response(200, "Updated")
     @api.response(400, "Validation Error")
+    @api.response(403, "Unauthorized action")
     @api.response(404, "Not Found")
     @api.marshal_with(place_model)
+    @jwt_required()
     def put(self, place_id):
-        """Update place information"""
+        """Update place information (only if owned by user)"""
+        current_user = get_jwt_identity()
+        place = facade.get_place(place_id)
+
+        if not place:
+            raise NotFound("Place not found")
+
+        if place.owner_id != current_user["id"]:
+            return {"error": "Unauthorized action"}, 403
+
         try:
             place_data = api.payload
             updated_place = facade.update_place(place_id, place_data)
-            if not updated_place:
-                raise NotFound("Place not found")
             return updated_place
         except ValueError as e:
             raise BadRequest(str(e))
