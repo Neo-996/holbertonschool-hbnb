@@ -27,17 +27,18 @@ class ReviewListResource(Resource):
     @api.marshal_with(review_model, code=201)
     def post(self):
         """Create a new review"""
-        current_user_id = get_jwt_identity()
-        review_data = api.payload  # validated input
+        identity = get_jwt_identity()
+        current_user_id = identity['id'] if isinstance(identity, dict) else identity
 
+        review_data = api.payload  # validated input
         review_data["user_id"] = current_user_id  # assign current user as reviewer
 
         place = facade.get_place(review_data["place_id"])
         if not place:
             raise NotFound("Place not found")
 
-        # Access as dict keys if facade returns dicts
-        if place.get("owner_id") == current_user_id:
+        owner_id = getattr(place, "owner_id", None) or place.get("owner_id")
+        if owner_id == current_user_id:
             raise BadRequest("You cannot review your own place.")
 
         if facade.user_reviewed_place(current_user_id, review_data["place_id"]):
@@ -76,14 +77,17 @@ class ReviewResource(Resource):
         if not review:
             raise NotFound("Review not found")
 
-        current_user_id = get_jwt_identity()
-        if review.get("user_id") != current_user_id:
+        identity = get_jwt_identity()
+        current_user_id = identity['id'] if isinstance(identity, dict) else identity
+
+        user_id = getattr(review, "user_id", None) or review.get("user_id")
+        if user_id != current_user_id:
             return {"error": "Unauthorized action"}, 403
 
         try:
             review_data = api.payload
             updated = facade.update_review(review_id, review_data)
-            return updated
+            return updated, 200
         except ValueError as e:
             raise BadRequest(str(e))
 
@@ -97,9 +101,13 @@ class ReviewResource(Resource):
         if not review:
             raise NotFound("Review not found")
 
-        current_user_id = get_jwt_identity()
-        if review.get("user_id") != current_user_id:
+        identity = get_jwt_identity()
+        current_user_id = identity['id'] if isinstance(identity, dict) else identity
+
+        user_id = getattr(review, "user_id", None) or review.get("user_id")
+        if user_id != current_user_id:
             return {"error": "Unauthorized action"}, 403
 
         facade.delete_review(review_id)
         return {"message": "Review deleted successfully"}, 200
+
