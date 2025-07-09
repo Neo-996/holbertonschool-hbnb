@@ -13,7 +13,7 @@ place_model = api.model("Place", {
     "latitude": fields.Float(required=True, min=-90, max=90, description="Latitude (-90 to 90)"),
     "longitude": fields.Float(required=True, min=-180, max=180, description="Longitude (-180 to 180)"),
     "max_guests": fields.Integer(required=True, min=1, description="Maximum guests (at least 1)"),
-    "owner_id": fields.String(description="ID of the owner/user"),  # Not required on input, set server-side
+    "owner_id": fields.String(description="ID of the owner/user"),  # Set by server
     "amenities": fields.List(fields.String, description="List of amenity IDs")
 })
 
@@ -32,7 +32,8 @@ class PlaceListResource(Resource):
     @api.marshal_with(place_model, code=201)
     def post(self):
         """Create a new place (authenticated users only)"""
-        current_user_id = get_jwt_identity()  # Expecting just user id here
+        identity = get_jwt_identity()
+        current_user_id = identity['id'] if isinstance(identity, dict) else identity
         try:
             place_data = api.payload
             place_data["owner_id"] = current_user_id  # Override client-provided owner_id
@@ -63,19 +64,22 @@ class PlaceResource(Resource):
     @api.marshal_with(place_model)
     def put(self, place_id):
         """Update place information (owner-only)"""
-        current_user_id = get_jwt_identity()
+        identity = get_jwt_identity()
+        current_user_id = identity['id'] if isinstance(identity, dict) else identity
         place = facade.get_place(place_id)
 
         if not place:
             raise NotFound("Place not found")
 
-        # Use dict key access if place is a dict
-        if place.get("owner_id") != current_user_id:
+        # Access attribute if place is object, else dict access
+        owner_id = getattr(place, "owner_id", None) or place.get("owner_id")
+        if owner_id != current_user_id:
             return {"error": "Unauthorized action"}, 403
 
         try:
             place_data = api.payload
             updated_place = facade.update_place(place_id, place_data)
-            return updated_place
+            return updated_place, 200
         except ValueError as e:
             raise BadRequest(str(e))
+
