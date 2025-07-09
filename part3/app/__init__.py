@@ -1,25 +1,23 @@
 from flask import Flask
-from flask_bcrypt import Bcrypt
-from flask_jwt_extended import JWTManager  # You were missing this import
-from app.services.facade import facade as ServiceFacade
-from config import DevelopmentConfig
+from flask_restx import Api
+from config import config
 
-bcrypt = Bcrypt()
-jwt = JWTManager()
+# Import your API namespaces here
+from app.api.v1.users import api as users_ns
+from app.api.v1.amenities import api as amenities_ns
+# Import other namespaces as needed (places, reviews, etc.)
 
-def create_app(config_class=DevelopmentConfig):
+def create_app(config_name='default'):
     app = Flask(__name__)
-    app.config.from_object(config_class)
+    app.config.from_object(config[config_name])
 
-    # Initialize extensions
-    bcrypt.init_app(app)
-    jwt.init_app(app)
+    # Initialize Flask-Restx API
+    api = Api(app, version='1.0', title='HBnB API', description='HBnB Application API')
 
-    # Attach facade for service access
-    app.facade = ServiceFacade
-
-    # Register API v1 blueprint
-    from app.api.v1 import bp as api_v1_bp
-    app.register_blueprint(api_v1_bp)
+    # Register namespaces
+    api.add_namespace(users_ns, path='/api/v1/users')
+    api.add_namespace(amenities_ns, path='/api/v1/amenities')
+    # Register other namespaces here
 
     return app
+
