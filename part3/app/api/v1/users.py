@@ -2,10 +2,11 @@
 from flask_restx import Namespace, Resource, fields
 from app.services.facade import facade
 from werkzeug.exceptions import NotFound, BadRequest
+from flask_jwt_extended import jwt_required, get_jwt_identity
 
 api = Namespace('users', description='User operations')
 
-# Updated model with password field
+# Model for user creation (with password)
 user_model = api.model('User', {
     'email': fields.String(
         required=True,
@@ -31,6 +32,21 @@ user_model = api.model('User', {
     )
 })
 
+# Model for updating user (no email or password)
+user_update_model = api.model('UserUpdate', {
+    'first_name': fields.String(
+        required=True,
+        min_length=1,
+        max_length=50,
+        description='First name (1-50 chars)'
+    ),
+    'last_name': fields.String(
+        required=True,
+        min_length=1,
+        max_length=50,
+        description='Last name (1-50 chars)'
+    )
+})
 
 @api.route('/')
 class UserList(Resource):
@@ -44,11 +60,9 @@ class UserList(Resource):
             if facade.get_user_by_email(user_data['email']):
                 return {'error': 'Email already registered'}, 400
 
-            # Create user instance and hash password
+            # Create user and hash password
             new_user = facade.create_user(user_data)
             new_user.set_password(user_data['password'])
-
-            # Save user (facade layer should persist this)
             new_user.save()
 
             return {
@@ -89,17 +103,30 @@ class UserResource(Resource):
             'email': user.email
         }, 200
 
-    @api.expect(user_model, validate=True)
+    @jwt_required()
+    @api.expect(user_update_model, validate=True)
     @api.response(200, 'User updated')
     @api.response(400, 'Invalid input')
+    @api.response(403, 'Unauthorized action')
     @api.response(404, 'User not found')
     def put(self, user_id):
-        """Update user information"""
+        """Update user information (only own, no email or password)"""
+        current_user = get_jwt_identity()
+        if current_user['id'] != user_id:
+            return {'error': 'Unauthorized action'}, 403
+
         try:
             user_data = api.payload
-            user = facade.update_user(user_id, user_data)
+            # Email and password cannot be updated here, no need to check since model excludes them
+
+            user = facade.get_user(user_id)
             if not user:
                 raise NotFound('User not found')
+
+            user.first_name = user_data['first_name']
+            user.last_name = user_data['last_name']
+
+            facade.save_user(user)
 
             return {
                 'id': user.id,
@@ -109,3 +136,4 @@ class UserResource(Resource):
             }, 200
         except ValueError as e:
             raise BadRequest(str(e))
+
