@@ -1,59 +1,41 @@
 #!/usr/bin/python3
-"""Base model for all application models"""
-import uuid
+"""Base SQLAlchemy model for all application models"""
+
+from app import db
 from datetime import datetime
-from typing import Dict, Any
+import uuid
 
-class BaseModel:
+class BaseModel(db.Model):
     """
-    Base class that defines common attributes/methods for other models
-    
-    Attributes:
-        id (str): Unique identifier
-        created_at (datetime): Creation timestamp
-        updated_at (datetime): Last update timestamp
+    BaseModel class that includes common attributes and methods
+    for all other models in the application.
     """
-    
-    def __init__(self):
-        """Initialize base model with default values"""
-        self.id = str(uuid.uuid4())
-        self.created_at = datetime.now()
-        self.updated_at = self.created_at
 
-    def save(self) -> None:
-        """Update the updated_at timestamp to current time"""
-        self.updated_at = datetime.now()
+    __abstract__ = True  # Prevents SQLAlchemy from creating a table for this class
 
-    def update(self, data: Dict[str, Any]) -> None:
-        """
-        Update model attributes from dictionary
-        
-        Args:
-            data: Dictionary of attributes to update
-            
-        Raises:
-            ValueError: If data contains invalid attributes
-        """
-        for key, value in data.items():
-            if not hasattr(self, key):
-                raise ValueError(f"Invalid attribute: {key}")
-            setattr(self, key, value)
-        self.save()
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    def to_dict(self) -> Dict[str, Any]:
-        """
-        Convert model to dictionary representation
-        
-        Returns:
-            Dictionary containing all model attributes
-        """
+    def save(self):
+        """Save this instance to the database"""
+        db.session.add(self)
+        db.session.commit()
+
+    def delete(self):
+        """Delete this instance from the database"""
+        db.session.delete(self)
+        db.session.commit()
+
+    def to_dict(self):
+        """Convert instance to dictionary (safe for API responses)"""
         return {
             'id': self.id,
-            'created_at': self.created_at.isoformat(),
-            'updated_at': self.updated_at.isoformat(),
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
             '__class__': self.__class__.__name__
         }
 
-    def __str__(self) -> str:
-        """String representation of the model"""
-        return f"[{self.__class__.__name__}] ({self.id}) {self.__dict__}"
+    def __repr__(self):
+        return f"<{self.__class__.__name__} {self.id}>"
+
