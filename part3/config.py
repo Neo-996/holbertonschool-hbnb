@@ -11,12 +11,17 @@ class Config:
     JWT_HEADER_NAME = 'Authorization'
     JWT_HEADER_TYPE = 'Bearer'
 
+    # SQLAlchemy general settings
+    SQLALCHEMY_TRACK_MODIFICATIONS = False  # Disable to avoid overhead
+
 class DevelopmentConfig(Config):
     DEBUG = True
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///development.db'  # SQLite for dev
 
 class ProductionConfig(Config):
     DEBUG = False
-    # Add production-specific configs here, e.g., DB URI
+    # Add your production DB URI here, e.g.:
+    # SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL')
 
 config = {
     'development': DevelopmentConfig,
