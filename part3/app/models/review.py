@@ -23,19 +23,8 @@ class Review(BaseModel):
     ):
         """
         Initialize a Review instance with validated attributes.
-        
-        Args:
-            text: Review content
-            rating: Star rating (1-5)
-            place_id: ID of reviewed place
-            user_id: ID of reviewing user
-            
-        Raises:
-            ValueError: For invalid attribute values
         """
         super().__init__()
-        
-        # Use property setters for validation
         self.text = text
         self.rating = rating
         self.place_id = place_id
@@ -43,35 +32,45 @@ class Review(BaseModel):
 
     @property
     def text(self) -> str:
-        """Get review text"""
         return self._text
 
     @text.setter
     def text(self, value: str) -> None:
-        """Set review text with validation"""
         if not isinstance(value, str) or not 1 <= len(value) <= 1024:
             raise ValueError("Review text must be 1-1024 characters")
         self._text = value
 
     @property
     def rating(self) -> int:
-        """Get review rating"""
         return self._rating
 
     @rating.setter
     def rating(self, value: int) -> None:
-        """Set review rating with validation"""
         if not isinstance(value, int) or not 1 <= value <= 5:
             raise ValueError("Rating must be integer between 1-5")
         self._rating = value
 
+    @property
+    def place_id(self) -> str:
+        return self._place_id
+
+    @place_id.setter
+    def place_id(self, value: str) -> None:
+        if not isinstance(value, str) or len(value.strip()) == 0:
+            raise ValueError("place_id must be a non-empty string")
+        self._place_id = value
+
+    @property
+    def user_id(self) -> str:
+        return self._user_id
+
+    @user_id.setter
+    def user_id(self, value: str) -> None:
+        if not isinstance(value, str) or len(value.strip()) == 0:
+            raise ValueError("user_id must be a non-empty string")
+        self._user_id = value
+
     def to_dict(self) -> Dict[str, Any]:
-        """
-        Convert review to dictionary representation.
-        
-        Returns:
-            Dictionary containing all review attributes
-        """
         data = super().to_dict()
         data.update({
             'text': self.text,
@@ -83,15 +82,6 @@ class Review(BaseModel):
         return data
 
     def update(self, data: Dict[str, Any]) -> None:
-        """
-        Update review attributes from dictionary.
-        
-        Args:
-            data: Dictionary of attributes to update
-            
-        Raises:
-            ValueError: If data contains invalid attributes or values
-        """
         for key, value in data.items():
             if not hasattr(self, key):
                 raise ValueError(f"Invalid attribute: {key}")
@@ -99,5 +89,5 @@ class Review(BaseModel):
         self.save()
 
     def __str__(self) -> str:
-        """String representation of the review"""
         return f"[Review] ({self.id}) {self.text[:50]}... (Rating: {self.rating})"
+
