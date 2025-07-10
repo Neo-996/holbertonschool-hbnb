@@ -1,18 +1,19 @@
 from typing import Dict, Any, List, Optional
+from app import db
 from app.models.user import User
 from app.models.place import Place
 from app.models.amenity import Amenity
 from app.models.review import Review
-from app.persistence.repository import InMemoryRepository
+from app.persistence.sqlalchemy_repository import SQLAlchemyRepository
 
 class HBnBFacade:
     def __init__(self):
-        self.user_repo = InMemoryRepository()
-        self.amenity_repo = InMemoryRepository()
-        self.place_repo = InMemoryRepository()
-        self.review_repo = InMemoryRepository()
+        self.user_repo = SQLAlchemyRepository(User)
+        self.amenity_repo = SQLAlchemyRepository(Amenity)
+        self.place_repo = SQLAlchemyRepository(Place)
+        self.review_repo = SQLAlchemyRepository(Review)
 
-    # User methods
+    # ----- USER METHODS -----
     def create_user(self, user_data: Dict[str, Any]) -> User:
         if self.get_user_by_email(user_data.get('email')):
             raise ValueError("Email already registered")
@@ -29,18 +30,14 @@ class HBnBFacade:
     def get_all_users(self) -> List[User]:
         return self.user_repo.get_all()
 
-    def list_users(self):
-        return self.user_repo.get_all()
-
     def update_user(self, user_id: str, user_data: Dict[str, Any]) -> Optional[User]:
         user = self.user_repo.get(user_id)
         if not user:
             return None
-        for key, value in user_data.items():
-            setattr(user, key, value)
+        self.user_repo.update(user_id, user_data)
         return user
 
-    # Amenity methods
+    # ----- AMENITY METHODS -----
     def create_amenity(self, amenity_data: Dict[str, Any]) -> Amenity:
         amenity = Amenity(**amenity_data)
         self.amenity_repo.add(amenity)
@@ -56,104 +53,80 @@ class HBnBFacade:
         amenity = self.get_amenity(amenity_id)
         if not amenity:
             return None
-        amenity.update(amenity_data)
+        self.amenity_repo.update(amenity_id, amenity_data)
         return amenity
 
-    # Place methods
-    def create_place(self, place_data: Dict[str, Any]) -> Dict[str, Any]:
-        price = place_data.get('price')
-        lat = place_data.get('latitude')
-        lon = place_data.get('longitude')
-
-        if price is None or price < 0:
-            raise ValueError("Invalid price")
-
-        if lat is None or lat < -90 or lat > 90:
-            raise ValueError("Invalid latitude")
-
-        if lon is None or lon < -180 or lon > 180:
-            raise ValueError("Invalid longitude")
-
-        owner_id = place_data.pop('owner_id', None)
-        if not owner_id:
-            raise ValueError("Owner ID is required")
-        owner = self.user_repo.get(owner_id)
+    # ----- PLACE METHODS -----
+    def create_place(self, place_data: Dict[str, Any]) -> Place:
+        owner = self.get_user(place_data["owner_id"])
         if not owner:
             raise ValueError("Owner not found")
 
-        amenity_ids = place_data.pop('amenities', [])
+        amenity_ids = place_data.pop("amenities", [])
         place = Place(owner=owner, **place_data)
 
         for amenity_id in amenity_ids:
-            amenity = self.amenity_repo.get(amenity_id)
+            amenity = self.get_amenity(amenity_id)
             if amenity:
-                place.add_amenity(amenity)
+                place.amenities.append(amenity)
 
         self.place_repo.add(place)
-        return place.to_dict()
+        return place
 
-    def get_place(self, place_id: str) -> Optional[Dict[str, Any]]:
-        place = self.place_repo.get(place_id)
-        return place.to_dict() if place else None
+    def get_place(self, place_id: str) -> Optional[Place]:
+        return self.place_repo.get(place_id)
 
-    def get_all_places(self) -> List[Dict[str, Any]]:
-        return [p.to_dict() for p in self.place_repo.get_all()]
+    def get_all_places(self) -> List[Place]:
+        return self.place_repo.get_all()
 
-    # Review methods
-    def create_review(self, review_data: Dict[str, Any]) -> Dict[str, Any]:
-        text = review_data.get('text')
-        rating = review_data.get('rating')
-        place_id = review_data.get('place_id')
-        user_id = review_data.get('user_id')
-
-        if not text:
-            raise ValueError("Review text is required")
-        if not (1 <= rating <= 5):
-            raise ValueError("Rating must be between 1 and 5")
-
+    def update_place(self, place_id: str, place_data: Dict[str, Any]) -> Optional[Place]:
         place = self.place_repo.get(place_id)
         if not place:
-            raise ValueError("Place not found")
+            return None
+        self.place_repo.update(place_id, place_data)
+        return place
 
-        user = self.user_repo.get(user_id)
-        if not user:
-            raise ValueError("User not found")
+    def delete_place(self, place_id: str) -> bool:
+        if self.place_repo.get(place_id):
+            self.place_repo.delete(place_id)
+            return True
+        return False
 
-        review = Review(text=text, rating=rating, place=place, user=user)
+    # ----- REVIEW METHODS -----
+    def create_review(self, review_data: Dict[str, Any]) -> Review:
+        place = self.get_place(review_data["place_id"])
+        user = self.get_user(review_data["user_id"])
+        if not place or not user:
+            raise ValueError("Invalid user or place")
+
+        review = Review(**review_data, user=user, place=place)
         self.review_repo.add(review)
-        place.add_review(review)
-        return review.to_dict()
+        return review
 
-    def get_review(self, review_id: str) -> Optional[Dict[str, Any]]:
-        review = self.review_repo.get(review_id)
-        return review.to_dict() if review else None
+    def get_review(self, review_id: str) -> Optional[Review]:
+        return self.review_repo.get(review_id)
 
-    def get_all_reviews(self) -> List[Dict[str, Any]]:
-        return [r.to_dict() for r in self.review_repo.get_all()]
+    def get_all_reviews(self) -> List[Review]:
+        return self.review_repo.get_all()
 
-    def get_reviews_by_place(self, place_id: str) -> List[Dict[str, Any]]:
-        place = self.place_repo.get(place_id)
-        if not place:
-            raise ValueError("Place not found")
-        return [r.to_dict() for r in place.reviews]
-
-    def update_review(self, review_id: str, review_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def update_review(self, review_id: str, review_data: Dict[str, Any]) -> Optional[Review]:
         review = self.review_repo.get(review_id)
         if not review:
             return None
-        for key, value in review_data.items():
-            setattr(review, key, value)
-        return review.to_dict()
+        self.review_repo.update(review_id, review_data)
+        return review
 
     def delete_review(self, review_id: str) -> bool:
-        review = self.review_repo.get(review_id)
-        if not review:
-            return False
-        self.review_repo.delete(review_id)
-        if review.place and review in review.place.reviews:
-            review.place.reviews.remove(review)
-        return True
+        if self.review_repo.get(review_id):
+            self.review_repo.delete(review_id)
+            return True
+        return False
+
+    def user_reviewed_place(self, user_id: str, place_id: str) -> bool:
+        reviews = self.review_repo.get_all()
+        return any(r.user_id == user_id and r.place_id == place_id for r in reviews)
 
 
-# Singleton instance to be shared across the app
+# Singleton facade instance
 facade = HBnBFacade()
+
