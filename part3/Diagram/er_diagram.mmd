@@ -1,1 +1,52 @@
-..
+erDiagram
+    users {
+        string id
+        string first_name
+        string last_name
+        string email
+        string password
+        boolean is_admin
+        datetime created_at
+        datetime updated_at
+    }
+
+    places {
+        string id
+        string title
+        string description
+        float price
+        float latitude
+        float longitude
+        string owner_id
+        datetime created_at
+        datetime updated_at
+    }
+
+    reviews {
+        string id
+        string text
+        int rating
+        string user_id
+        string place_id
+        datetime created_at
+        datetime updated_at
+    }
+
+    amenities {
+        string id
+        string name
+        datetime created_at
+        datetime updated_at
+    }
+
+    place_amenity {
+        string place_id
+        string amenity_id
+    }
+
+    %% العلاقات
+    users ||--o{ places : owns
+    users ||--o{ reviews : writes
+    places ||--o{ reviews : has
+    places ||--o{ place_amenity : includes
+    amenities ||--o{ place_amenity : is_part_of
