@@ -1,76 +1,47 @@
 #!/usr/bin/python3
-"""Review model implementation"""
+"""Review model implementation with SQLAlchemy ORM"""
+
+from app import db
 from .base_model import BaseModel
-from typing import Dict, Any
+from sqlalchemy import Column, String, Integer, ForeignKey, Text, CheckConstraint
 
 class Review(BaseModel):
     """
-    Review class represents a user's review of a place.
+    Review SQLAlchemy model representing user reviews.
     
     Attributes:
         text (str): Review content (1-1024 chars)
         rating (int): Rating (1-5 stars)
-        place_id (str): Associated place ID
-        user_id (str): Reviewing user ID
+        place_id (str): Reference to Place
+        user_id (str): Reference to User
     """
-    
-    def __init__(
-        self,
-        text: str,
-        rating: int,
-        place_id: str,
-        user_id: str
-    ):
+    __tablename__ = 'reviews'
+    __table_args__ = (
+        CheckConstraint('rating BETWEEN 1 AND 5', name='check_rating_range'),
+    )
+
+    # SQLAlchemy Columns
+    text = Column(Text, nullable=False)
+    rating = Column(Integer, nullable=False)
+    place_id = Column(String(60), ForeignKey('places.id'), nullable=False)
+    user_id = Column(String(60), ForeignKey('users.id'), nullable=False)
+
+    def __init__(self, **kwargs):
         """
-        Initialize a Review instance with validated attributes.
+        Initialize with validation:
+        - Validates rating range
+        - Validates text length
         """
-        super().__init__()
-        self.text = text
-        self.rating = rating
-        self.place_id = place_id
-        self.user_id = user_id
+        if 'rating' in kwargs and not (1 <= kwargs['rating'] <= 5):
+            raise ValueError("Rating must be between 1-5")
+            
+        if 'text' in kwargs and len(kwargs['text'].strip()) < 1:
+            raise ValueError("Review text cannot be empty")
+            
+        super().__init__(**kwargs)
 
-    @property
-    def text(self) -> str:
-        return self._text
-
-    @text.setter
-    def text(self, value: str) -> None:
-        if not isinstance(value, str) or not 1 <= len(value) <= 1024:
-            raise ValueError("Review text must be 1-1024 characters")
-        self._text = value
-
-    @property
-    def rating(self) -> int:
-        return self._rating
-
-    @rating.setter
-    def rating(self, value: int) -> None:
-        if not isinstance(value, int) or not 1 <= value <= 5:
-            raise ValueError("Rating must be integer between 1-5")
-        self._rating = value
-
-    @property
-    def place_id(self) -> str:
-        return self._place_id
-
-    @place_id.setter
-    def place_id(self, value: str) -> None:
-        if not isinstance(value, str) or len(value.strip()) == 0:
-            raise ValueError("place_id must be a non-empty string")
-        self._place_id = value
-
-    @property
-    def user_id(self) -> str:
-        return self._user_id
-
-    @user_id.setter
-    def user_id(self, value: str) -> None:
-        if not isinstance(value, str) or len(value.strip()) == 0:
-            raise ValueError("user_id must be a non-empty string")
-        self._user_id = value
-
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self):
+        """Serialize to dictionary"""
         data = super().to_dict()
         data.update({
             'text': self.text,
@@ -81,13 +52,5 @@ class Review(BaseModel):
         })
         return data
 
-    def update(self, data: Dict[str, Any]) -> None:
-        for key, value in data.items():
-            if not hasattr(self, key):
-                raise ValueError(f"Invalid attribute: {key}")
-            setattr(self, key, value)
-        self.save()
-
-    def __str__(self) -> str:
-        return f"[Review] ({self.id}) {self.text[:50]}... (Rating: {self.rating})"
-
+    def __repr__(self):
+        return f"<Review {self.id} (Rating: {self.rating}/5)>"

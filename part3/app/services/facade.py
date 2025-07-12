@@ -1,6 +1,11 @@
+#!/usr/bin/python3
+"""Facade pattern implementation for HBnB services"""
+
 from typing import Dict, Any, List, Optional
-from app.services.repositories.user_repository import UserRepository
-from app.persistence.sqlalchemy_repository import SQLAlchemyRepository
+from .repositories.user_repository import UserRepository
+from .repositories.place_repository import PlaceRepository
+from .repositories.review_repository import ReviewRepository
+from .repositories.amenity_repository import AmenityRepository
 from app.models.user import User
 from app.models.place import Place
 from app.models.amenity import Amenity
@@ -9,14 +14,15 @@ from app.models.review import Review
 
 class HBnBFacade:
     def __init__(self):
-        self.user_repo = UserRepository()  # specialized for User
-        self.amenity_repo = SQLAlchemyRepository(Amenity)
-        self.place_repo = SQLAlchemyRepository(Place)
-        self.review_repo = SQLAlchemyRepository(Review)
+        self.users = UserRepository()
+        self.places = PlaceRepository()
+        self.reviews = ReviewRepository()
+        self.amenities = AmenityRepository()
 
     # ----- USER METHODS -----
     def create_user(self, user_data: Dict[str, Any]) -> User:
-        if self.user_repo.get_user_by_email(user_data.get('email')):
+        """Create new user with password hashing"""
+        if self.users.get_user_by_email(user_data.get('email')):
             raise ValueError("Email already registered")
 
         user = User(
@@ -25,146 +31,115 @@ class HBnBFacade:
             email=user_data['email'],
             is_admin=user_data.get('is_admin', False)
         )
-        user.set_password(user_data['password'])  # Hash password before saving
-        self.user_repo.add(user)
+        user.hash_password(user_data['password'])
+        self.users.add(user)
         return user
 
     def get_user(self, user_id: str) -> Optional[User]:
-        return self.user_repo.get(user_id)
+        return self.users.get(user_id)
 
     def get_user_by_email(self, email: str) -> Optional[User]:
-        return self.user_repo.get_user_by_email(email)
+        return self.users.get_user_by_email(email)
 
     def get_all_users(self) -> List[User]:
-        return self.user_repo.get_all()
+        return self.users.get_all()
 
     def update_user(self, user_id: str, user_data: Dict[str, Any]) -> Optional[User]:
-        user = self.user_repo.get(user_id)
+        user = self.users.get(user_id)
         if not user:
             return None
+            
         if 'password' in user_data:
-            user.set_password(user_data.pop('password'))
-        self.user_repo.update(user_id, user_data)
+            user.hash_password(user_data.pop('password'))
+            
+        self.users.update(user_id, user_data)
         return user
-
-    def delete_user(self, user_id: str) -> bool:
-        if self.user_repo.get(user_id):
-            self.user_repo.delete(user_id)
-            return True
-        return False
-
-    # ----- AMENITY METHODS -----
-    def create_amenity(self, amenity_data: Dict[str, Any]) -> Amenity:
-        amenity = Amenity(**amenity_data)
-        self.amenity_repo.add(amenity)
-        return amenity
-
-    def get_amenity(self, amenity_id: str) -> Optional[Amenity]:
-        return self.amenity_repo.get(amenity_id)
-
-    def get_all_amenities(self) -> List[Amenity]:
-        return self.amenity_repo.get_all()
-
-    def update_amenity(self, amenity_id: str, amenity_data: Dict[str, Any]) -> Optional[Amenity]:
-        amenity = self.get_amenity(amenity_id)
-        if not amenity:
-            return None
-        self.amenity_repo.update(amenity_id, amenity_data)
-        return amenity
-
-    def delete_amenity(self, amenity_id: str) -> bool:
-        if self.get_amenity(amenity_id):
-            self.amenity_repo.delete(amenity_id)
-            return True
-        return False
 
     # ----- PLACE METHODS -----
     def create_place(self, place_data: Dict[str, Any]) -> Place:
-        owner = self.get_user(place_data["owner_id"])
-        if not owner:
+        """Create new place with validation"""
+        if not self.users.get(place_data["owner_id"]):
             raise ValueError("Owner not found")
 
-        amenity_ids = place_data.pop("amenities", [])
-
-        # Create Place instance — assuming your Place expects owner_id, not owner object
-        place = Place(
-            title=place_data['title'],
-            description=place_data.get('description', ""),
-            price_per_night=place_data['price_per_night'],
-            latitude=place_data['latitude'],
-            longitude=place_data['longitude'],
-            max_guests=place_data['max_guests'],
-            owner_id=owner.id,
-        )
-
-        # Add amenities by loading Amenity objects
-        for amenity_id in amenity_ids:
-            amenity = self.get_amenity(amenity_id)
-            if amenity:
-                place.amenities.append(amenity)
-
-        self.place_repo.add(place)
+        place = Place(**{
+            k: v for k, v in place_data.items() 
+            if k in [
+                'title', 'description', 'price_per_night',
+                'latitude', 'longitude', 'max_guests', 'owner_id'
+            ]
+        })
+        
+        self.places.add(place)
         return place
+
+    def search_places(self, filters: Dict[str, Any]) -> List[Place]:
+        """Advanced place search with filters"""
+        query = self.places._session.query(Place)
+        
+        if 'min_price' in filters and 'max_price' in filters:
+            query = query.filter(
+                Place.price_per_night.between(
+                    filters['min_price'] * 100,
+                    filters['max_price'] * 100
+                )
+            )
+            
+        if 'owner_id' in filters:
+            query = query.filter_by(owner_id=filters['owner_id'])
+            
+        return query.all()
 
     def get_place(self, place_id: str) -> Optional[Place]:
-        return self.place_repo.get(place_id)
+        return self.places.get(place_id)
 
-    def get_all_places(self) -> List[Place]:
-        return self.place_repo.get_all()
-
-    def update_place(self, place_id: str, place_data: Dict[str, Any]) -> Optional[Place]:
-        place = self.place_repo.get(place_id)
-        if not place:
-            return None
-        self.place_repo.update(place_id, place_data)
-        return place
-
-    def delete_place(self, place_id: str) -> bool:
-        if self.place_repo.get(place_id):
-            self.place_repo.delete(place_id)
-            return True
-        return False
+    def get_places_by_owner(self, owner_id: str) -> List[Place]:
+        return self.places.get_by_owner(owner_id)
 
     # ----- REVIEW METHODS -----
     def create_review(self, review_data: Dict[str, Any]) -> Review:
-        place = self.get_place(review_data["place_id"])
-        user = self.get_user(review_data["user_id"])
-        if not place or not user:
-            raise ValueError("Invalid user or place")
+        """Create review with validation"""
+        if not all(key in review_data for key in ['text', 'rating', 'user_id', 'place_id']):
+            raise ValueError("Missing required fields")
 
-        review = Review(
-            text=review_data['text'],
-            rating=review_data['rating'],
-            place_id=place.id,
-            user_id=user.id
-        )
-        self.review_repo.add(review)
+        if not (1 <= review_data['rating'] <= 5):
+            raise ValueError("Rating must be between 1-5")
+
+        review = Review(**review_data)
+        self.reviews.add(review)
         return review
 
-    def get_review(self, review_id: str) -> Optional[Review]:
-        return self.review_repo.get(review_id)
+    def get_place_reviews(self, place_id: str) -> List[Review]:
+        return self.reviews.get_by_place(place_id)
 
-    def get_all_reviews(self) -> List[Review]:
-        return self.review_repo.get_all()
+    def get_place_rating(self, place_id: str) -> float:
+        return self.reviews.get_average_rating(place_id) or 0.0
 
-    def update_review(self, review_id: str, review_data: Dict[str, Any]) -> Optional[Review]:
-        review = self.review_repo.get(review_id)
-        if not review:
-            return None
-        self.review_repo.update(review_id, review_data)
-        return review
+    # ----- AMENITY METHODS -----
+    def create_amenity(self, name: str) -> Amenity:
+        """Create new amenity with name validation"""
+        if not name.strip():
+            raise ValueError("Amenity name cannot be empty")
+            
+        amenity = Amenity(name=name)
+        self.amenities.add(amenity)
+        return amenity
 
-    def delete_review(self, review_id: str) -> bool:
-        if self.review_repo.get(review_id):
-            self.review_repo.delete(review_id)
+    def find_amenities(self, search_term: str) -> List[Amenity]:
+        return self.amenities.search_by_name(search_term)
+
+    # ----- ADMIN METHODS -----
+    def delete_entity(self, entity_type: str, entity_id: str) -> bool:
+        """Generic delete method for admin"""
+        repo = getattr(self, f"{entity_type}s", None)
+        if not repo:
+            raise ValueError("Invalid entity type")
+            
+        entity = repo.get(entity_id)
+        if entity:
+            repo.delete(entity_id)
             return True
         return False
 
-    def user_reviewed_place(self, user_id: str, place_id: str) -> bool:
-        reviews = self.review_repo.get_all()
-        return any(r.user_id == user_id and r.place_id == place_id for r in reviews)
 
-
-# Singleton facade instance
+# Singleton instance
 facade = HBnBFacade()
-

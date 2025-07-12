@@ -24,6 +24,9 @@ class User(BaseModel):
     password = db.Column(db.String(128), nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
 
+    places = db.relationship('Place', backref='owner', cascade='all, delete-orphan')
+    reviews = db.relationship('Review', backref='user', cascade='all, delete-orphan')
+
     def hash_password(self, plain_password):
         """Hash a plaintext password and store it"""
         if not plain_password or len(plain_password) < 8:
@@ -42,7 +45,7 @@ class User(BaseModel):
             'last_name': self.last_name,
             'email': self.email,
             'is_admin': self.is_admin,
-            '__class__': self.__class__.__name__
+            '__class__': self.__class__.__name__         
         })
         return data
 
