@@ -2,32 +2,25 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>HBnB - List of Places</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HBnB - Places</title>
   <link rel="stylesheet" href="styles/style.css" />
 </head>
 <body>
   <header>
     <img src="images/logo.png" alt="HBnB Logo" class="logo" />
-    <a href="login.html" class="login-button">Login</a>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="login.html" class="login-button">Login</a>
+    </nav>
   </header>
 
-  <nav>
-    <a href="index.html">Home</a>
-    <a href="login.html">Login</a>
-  </nav>
-
   <main>
-    <section id="filters">
-      <label for="country-filter">Filter by Country:</label>
-      <select id="country-filter">
-        <option value="all">All Countries</option>
-        <!-- Options populated dynamically -->
-      </select>
-    </section>
-
-    <section id="places-list">
-      <!-- Places cards will be inserted here dynamically -->
+    <section>
+      <h2>Places</h2>
+      <section id="places-list">
+        <!-- List of places will be populated dynamically -->
+      </section>
     </section>
   </main>
 
@@ -38,4 +31,3 @@
   <script src="scripts/index.js"></script>
 </body>
 </html>
-

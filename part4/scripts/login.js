@@ -1,37 +1,39 @@
 document.addEventListener('DOMContentLoaded', () => {
-  const form = document.getElementById('login-form');
-  const errorMessage = document.getElementById('error-message');
+  const loginForm = document.getElementById('login-form');
 
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    errorMessage.textContent = '';
+  if (loginForm) {
+    loginForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
 
-    const email = form.email.value.trim();
-    const password = form.password.value;
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value.trim();
+      const errorMsg = document.getElementById('error-message');
 
-    try {
-      const response = await fetch('/api/v1/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
+      try {
+        const response = await fetch('http://localhost:5000/api/v1/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ email, password })
+        });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Login failed');
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Login failed');
+        }
+
+        const data = await response.json();
+        document.cookie = `token=${data.access_token}; path=/`;
+
+        window.location.href = 'index.html';
+      } catch (error) {
+        if (errorMsg) {
+          errorMsg.textContent = error.message;
+        } else {
+          alert(error.message);
+        }
       }
-
-      const data = await response.json();
-
-      // Save token to localStorage (or cookie)
-      localStorage.setItem('jwt_token', data.access_token);
-
-      // Redirect to index page after login
-      window.location.href = 'index.html';
-    } catch (err) {
-      errorMessage.textContent = err.message;
-    }
-  });
+    });
+  }
 });
