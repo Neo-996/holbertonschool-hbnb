@@ -1,44 +1,120 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>HBnB - Place Details</title>
-    <link rel="stylesheet" href="styles/style.css" />
-    <link rel="icon" href="images/icon.png" />
-  </head>
-  <body>
-    <header>
-      <nav>
-        <a href="index.html"><img src="images/logo.png" alt="HBnB Logo" class="logo" /></a>
-        <a href="login.html" class="login-button">Login</a>
-      </nav>
-    </header>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Place Details</title>
+  <link rel="stylesheet" href="styles/style.css" />
+</head>
+<body>
+  <header>
+    <img src="images/logo.png" alt="HBnB Logo" class="logo" />
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="login.html" class="login-button">Login</a>
+    </nav>
+  </header>
 
-    <main>
-      <section class="place-details">
-        <div class="place-info" id="place-info">
-          <!-- Place details populated dynamically -->
-        </div>
+  <main>
+    <section class="place-details">
+      <h1 id="place-title">Loading...</h1>
+      <p class="place-info" id="place-host"></p>
+      <p class="place-info" id="place-price"></p>
+      <p class="place-info" id="place-description"></p>
+
+      <h2>Amenities</h2>
+      <ul id="amenities-list"></ul>
+
+      <h2>Reviews</h2>
+      <section id="reviews-list">
+        <!-- Review cards will be inserted here -->
       </section>
 
-      <section class="reviews">
-        <h2>Reviews</h2>
-        <div id="review-list">
-          <!-- Review cards inserted dynamically here -->
-        </div>
+      <button id="add-review-btn" style="display:none;">Add Review</button>
+    </section>
+  </main>
 
-        <div id="add-review-link">
-          <!-- If user is authenticated, show this -->
-          <!-- Inserted dynamically by JavaScript -->
-        </div>
-      </section>
-    </main>
+  <footer>
+    <p>© 2025 HBnB. All rights reserved.</p>
+  </footer>
 
-    <footer>
-      <p>&copy; 2025 HBnB. All rights reserved.</p>
-    </footer>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      const params = new URLSearchParams(window.location.search);
+      const placeId = params.get('id');
+      const token = localStorage.getItem('jwt_token');
+      const addReviewBtn = document.getElementById('add-review-btn');
 
-    <script src="scripts/place.js"></script>
-  </body>
+      if (!token) {
+        // Redirect to login if not authenticated
+        window.location.href = 'login.html';
+        return;
+      }
+
+      if (!placeId) {
+        alert('No place ID specified');
+        window.location.href = 'index.html';
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/v1/places/${placeId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (!res.ok) {
+          throw new Error('Failed to load place details');
+        }
+
+        const place = await res.json();
+
+        document.getElementById('place-title').textContent = place.title;
+        document.getElementById('place-host').textContent = `Host: ${place.owner.first_name} ${place.owner.last_name}`;
+        document.getElementById('place-price').textContent = `Price per night: $${place.price_per_night}`;
+        document.getElementById('place-description').textContent = place.description;
+
+        // Populate amenities
+        const amenitiesList = document.getElementById('amenities-list');
+        amenitiesList.innerHTML = '';
+        if (place.amenities && place.amenities.length > 0) {
+          place.amenities.forEach(amenity => {
+            const li = document.createElement('li');
+            li.textContent = amenity.name;
+            amenitiesList.appendChild(li);
+          });
+        } else {
+          amenitiesList.innerHTML = '<li>No amenities listed</li>';
+        }
+
+        // Populate reviews
+        const reviewsList = document.getElementById('reviews-list');
+        reviewsList.innerHTML = '';
+        if (place.reviews && place.reviews.length > 0) {
+          place.reviews.forEach(review => {
+            const reviewCard = document.createElement('div');
+            reviewCard.className = 'review-card';
+            reviewCard.innerHTML = `
+              <p>"${review.comment}"</p>
+              <p>By: ${review.user.first_name} ${review.user.last_name}</p>
+              <p>Rating: ${review.rating}/5</p>
+            `;
+            reviewsList.appendChild(reviewCard);
+          });
+        } else {
+          reviewsList.innerHTML = '<p>No reviews yet.</p>';
+        }
+
+        // Show add review button if user is authenticated
+        addReviewBtn.style.display = 'inline-block';
+        addReviewBtn.addEventListener('click', () => {
+          window.location.href = `add_review.html?place_id=${placeId}`;
+        });
+
+      } catch (error) {
+        alert(error.message);
+        window.location.href = 'index.html';
+      }
+    });
+  </script>
+</body>
 </html>
