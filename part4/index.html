@@ -11,13 +11,22 @@
     <img src="images/logo.png" alt="HBnB Logo" class="logo" />
     <nav>
       <a href="index.html">Home</a>
-      <a href="login.html" class="login-button">Login</a>
+      <a href="login.html" class="login-button" id="login-link">Login</a>
     </nav>
   </header>
 
   <main>
     <section>
       <h2>Places</h2>
+
+      <label for="price-filter">Filter by price:</label>
+      <select id="price-filter">
+        <option value="All">All</option>
+        <option value="10">Under $10</option>
+        <option value="50">Under $50</option>
+        <option value="100">Under $100</option>
+      </select>
+
       <section id="places-list">
         <!-- List of places will be populated dynamically -->
       </section>
@@ -31,3 +40,4 @@
   <script src="scripts/index.js"></script>
 </body>
 </html>
+
