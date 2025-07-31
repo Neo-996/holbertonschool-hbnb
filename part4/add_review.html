@@ -36,67 +36,7 @@
     <p>© 2025 HBnB. All rights reserved.</p>
   </footer>
 
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const token = localStorage.getItem('jwt_token');
-      const params = new URLSearchParams(window.location.search);
-      const placeId = params.get('place_id');
-
-      if (!token) {
-        // Redirect to login if not authenticated
-        window.location.href = 'login.html';
-        return;
-      }
-
-      if (!placeId) {
-        alert('No place specified for review.');
-        window.location.href = 'index.html';
-        return;
-      }
-
-      const form = document.getElementById('review-form');
-      form.addEventListener('submit', async (event) => {
-        event.preventDefault();
-
-        const rating = form.rating.value;
-        const comment = form.comment.value.trim();
-
-        if (rating < 1 || rating > 5) {
-          alert('Rating must be between 1 and 5.');
-          return;
-        }
-
-        if (comment.length === 0) {
-          alert('Please enter a comment.');
-          return;
-        }
-
-        try {
-          const response = await fetch('/api/v1/reviews', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({
-              place_id: placeId,
-              rating: parseInt(rating),
-              comment: comment
-            })
-          });
-
-          if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || 'Failed to submit review.');
-          }
-
-          alert('Review submitted successfully!');
-          window.location.href = `place.html?id=${placeId}`;
-        } catch (error) {
-          alert(`Error: ${error.message}`);
-        }
-      });
-    });
-  </script>
+  <script src="scripts/add_review.js"></script>
 </body>
 </html>
+
